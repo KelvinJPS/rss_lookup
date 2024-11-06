@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 )
 
@@ -16,45 +17,43 @@ func main() {
 	defer file.Close()
 	// Read text file line  by line
 	scanner := bufio.NewScanner(file)
+	// look if rss or atom feed exists
+	rss_ext := [...]string{"rss.xml", "feed.xml", "feed.atom", "index.xml", "rss.atom", "rss.rss", "index.atom"}
+	var feeds []string
+
 	for scanner.Scan() {
-
 		website_url := scanner.Text()
-		// look if rss or atom feed exists
-		//NOTE: We are assuming that the rss feed will be located at website/rss.xml or website/atom.xml this might not be true for all of the websites
-		rss_ext := [...]string{".rss", ".xml", ".atom"}
-		// var feeds []string
 		for i := range len(rss_ext) {
-			rss_url := website_url + "rss" + rss_ext[i]
-			// Add / so it can properly be requested
-			if len(rss_url) > 0 && rss_url[len(rss_url)-1] != '/' {
 
-				rss_url = rss_url + "/"
+			// Add / so it can properly be requested
+			if len(website_url) > 0 && website_url[len(website_url)-1] != '/' {
+				website_url = website_url + "/"
 
 			}
-
-			fmt.Println(rss_url)
-
-			// resp, err := http.Get(website_url + rss_url)
+			rss_url := website_url + rss_ext[i]
+			resp, err := http.Get(rss_url)
 
 			// Depending on the status code, we will append the url to our feeds
-			// if resp.StatusCode != http.StatusOK {
-			// 	fmt.Printf("Bad status: %d\n", resp.StatusCode)
-			// } else {
-			// 	feeds = append(feeds, rss_url)
-			// 	fmt.Printf("adding", rss_url)
-			//
-			// }
-			// if err != nil {
-			// 	fmt.Printf("Error fetching %s: %v\n", website_url, err)
-			// 	return
-			// }
-			// defer resp.Body.Close() // Important: always close the response body!
-			// fmt.Printf("Status Code: %d\n", resp.StatusCode)
+			if resp.StatusCode != http.StatusOK {
+				fmt.Printf("Bad status: %d\n", resp.StatusCode)
+			} else {
+				feeds = append(feeds, rss_url)
+			}
+			if err != nil {
+				fmt.Printf("Error fetching %s: %v\n", website_url, err)
+				return
+			}
+			defer resp.Body.Close() // Important: always close the response body!
+			fmt.Printf("Status Code: %d\n", resp.StatusCode)
 		}
 
 	}
 
 	if err := scanner.Err(); err != nil {
 		log.Fatal(err)
+	}
+
+	for i := range len(feeds) {
+		println(feeds[i])
 	}
 }
